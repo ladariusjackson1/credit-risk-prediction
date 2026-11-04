@@ -2,11 +2,33 @@
 
 **Ladarius Jackson · Business Analytics**
 
+[![CI](https://github.com/ladariusjackson1/credit-risk-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/ladariusjackson1/credit-risk-prediction/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/Live_demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://credit-risk-prediction.streamlit.app)
+
+## Business problem
+
 A lender does not get paid for a high AUC. It gets paid when a booked loan performs, and it takes a loss when a booked loan defaults. This project asks a desk-level question of the public Statlog German Credit file: **given that funding a defaulter is five times as costly as turning away a borrower who would have paid, who should be approved?**
 
-The answer is a gradient-boosting score with a cutoff of **0.15**, not the usual 0.50. On a locked holdout of 200 applicants the policy books 56 loans, 5 of which default, and an illustrative cost of **$22,800**. Approving everyone costs $60,000. Denying everyone costs $28,000. A 0.50 cutoff barely beats denying everyone.
+The answer is a gradient-boosting score with a cutoff of **0.15**, not the usual 0.50. On a locked holdout of 200 applicants the policy books 56 loans, 5 of which default. The illustrative cost of that book is **$22,800**.
 
-![CI](https://github.com/ladariusjackson1/credit-risk-prediction/actions/workflows/ci.yml/badge.svg)
+## Money saved
+
+Dollars below translate the published Statlog matrix at **1 cost unit = $200**. A false approval is $1,000. A false denial is $200 of margin given up. They are not a loss model fit from the file.
+
+| Holdout policy | Booked defaults | Illustrative cost | Saved by the 0.15 cutoff |
+| --- | ---: | ---: | ---: |
+| Approve everyone | 60 | $60,000 | $37,200 |
+| Deny everyone | 0 | $28,000 | $5,200 |
+| Score cutoff 0.50 | 20 | $27,200 | $4,400 |
+| **Tuned cutoff 0.15** | **5** | **$22,800** | — |
+
+Against approving every holdout applicant, the tuned desk avoids 55 false approvals and gives up 89 performing loans. That is $55,000 of default losses avoided and $17,800 of margin given up, a net **$37,200**. Against a 0.50 cutoff, booked defaults fall from 20 to 5. The $15,000 of default losses avoided outweighs $10,600 of extra turned-away margin, a net **$4,400**.
+
+## Desk demo
+
+![Desk scorer: a typical applicant, then the fields that push the default probability up or down](docs/credit-desk-demo.gif)
+
+The [live demo](https://credit-risk-prediction.streamlit.app) runs this repository on Streamlit Community Cloud. The main file is `streamlit_app.py`. The app loads `models/credit_risk_model.joblib` from disk and does not download the dataset at startup. For anyone other than the typical training applicant, the panel says which fields push the estimated default probability up or down relative to that profile.
 
 ## The decision
 
@@ -109,7 +131,7 @@ Holdout Brier score for the selected model is 0.187. Predicting the 30% base rat
 
 ![Holdout calibration](reports/figures/calibration.png)
 
-## Takeaways
+## Findings
 
 - Under the published 5:1 matrix, the value is in the cutoff. A 0.50 threshold almost fails to beat "lend to nobody." The tuned rule cuts booked defaults from 20 to 5 on the holdout and lowers illustrative cost from $27,200 to $22,800.
 - The tuned book is small on purpose: 28% of holdout applicants, an 8.9% default rate inside the booked loans, and 92% of defaulters turned away.
@@ -130,23 +152,27 @@ Python 3.10 or newer.
 python -m pip install -r requirements.txt
 PYTHONPATH=src python -m credit_risk
 PYTHONPATH=src python -m pytest
-python -m ruff check src tests app
-python -m streamlit run app/streamlit_app.py
+python -m ruff check src tests streamlit_app.py
+python -m streamlit run streamlit_app.py
 ```
 
-`python -m credit_risk` rewrites `reports/`, the figures, and `models/credit_risk_model.joblib`. `--refresh` redownloads OpenML `credit-g` before training. The desk app scores one applicant with that saved model and the 0.15 cutoff. It opens on a typical training applicant, and a reset button returns to that profile.
+`requirements.txt` pins every direct dependency, including scikit-learn 1.9.1, the version that wrote `models/credit_risk_model.joblib`. `python -m credit_risk` rewrites `reports/`, the figures, and the model. `--refresh` redownloads OpenML `credit-g` before training. Without `--refresh`, training reads `data/german_credit.csv`.
+
+Streamlit Community Cloud deploys this repository with main file `streamlit_app.py` and Python 3.12 (`.python-version`). `.streamlit/config.toml` turns usage stats off and sets the desk theme. The app adds `src` to its import path, loads the committed model, and does not contact the network on startup. It opens on a typical training applicant. Reset returns to that profile. When a field differs from that profile, the decision panel states the local contribution: the change in estimated default probability from putting that one field back, with the other fields left as entered.
 
 The numbers in this README were produced by that command on Python 3.12 with scikit-learn 1.9.1, pandas 3.1.0, and NumPy 2.5.4 (`reports/metrics.json` records the versions).
 
 ## Layout
 
 ```
-src/credit_risk/    data, features, models, cross-validation, cost, plots, scoring
-app/streamlit_app.py
-data/german_credit.csv
+streamlit_app.py                 Community Cloud entry point
+src/credit_risk/                 data, features, models, cost, plots, scoring, explanations
+data/german_credit.csv           offline snapshot of OpenML credit-g
 models/credit_risk_model.joblib
-reports/            metrics, tables, figures
-tests/              pytest, 100% line coverage of src/credit_risk
+reports/                         metrics, tables, figures
+docs/credit-desk-demo.gif
+tests/                           pytest, 100% line coverage of src/credit_risk
+.streamlit/config.toml
 .github/workflows/ci.yml
 ```
 

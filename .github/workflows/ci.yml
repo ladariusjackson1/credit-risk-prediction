@@ -24,10 +24,10 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Lint
-        run: python -m ruff check src tests app
+        run: python -m ruff check src tests streamlit_app.py
 
       - name: Check formatting
-        run: python -m ruff format --check src tests app
+        run: python -m ruff format --check src tests streamlit_app.py
 
       - name: Test with coverage
         run: python -m pytest

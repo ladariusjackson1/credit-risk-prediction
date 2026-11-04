@@ -83,20 +83,25 @@ def applicant_frame(record: Mapping, artifact: Mapping) -> pd.DataFrame:
     return pd.DataFrame([row], columns=columns)
 
 
-def score_applicant(record: Mapping, artifact: Mapping) -> ApplicantScore:
-    """Estimate default probability and approve or deny at the saved cutoff."""
-    features = applicant_frame(record, artifact)
-    probability = float(positive_class_probability(artifact["pipeline"], features)[0])
+def assemble_score(probability: float, artifact: Mapping) -> ApplicantScore:
+    """Turn a default probability into the desk's approve or deny decision."""
     threshold = float(_require(artifact, "threshold"))
     band = float(artifact.get("review_band", config.REVIEW_BAND))
     decision = "deny" if probability >= threshold else "approve"
     return ApplicantScore(
-        probability_default=probability,
+        probability_default=float(probability),
         threshold=threshold,
         decision=decision,
-        near_cutoff=abs(probability - threshold) <= band,
+        near_cutoff=abs(float(probability) - threshold) <= band,
         model_name=str(_require(artifact, "model_name")),
     )
+
+
+def score_applicant(record: Mapping, artifact: Mapping) -> ApplicantScore:
+    """Estimate default probability and approve or deny at the saved cutoff."""
+    features = applicant_frame(record, artifact)
+    probability = float(positive_class_probability(artifact["pipeline"], features)[0])
+    return assemble_score(probability, artifact)
 
 
 def decision_narrative(score: ApplicantScore, artifact: Mapping) -> str:

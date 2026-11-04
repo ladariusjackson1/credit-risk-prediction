@@ -17,7 +17,7 @@ exclude_lines = [
 [tool.ruff]
 target-version = "py310"
 line-length = 100
-src = ["src", "tests", "app"]
+src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
@@ -28,7 +28,7 @@ known-first-party = ["credit_risk", "tests"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["E501"]
 "src/credit_risk/plots.py" = ["E402"]
-"app/streamlit_app.py" = ["E402"]
+"streamlit_app.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"
