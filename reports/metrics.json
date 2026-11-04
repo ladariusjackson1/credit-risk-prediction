@@ -1,0 +1,313 @@
+{
+  "dataset": {
+    "name": "Statlog German Credit (OpenML credit-g, version 1)",
+    "citation": "Hofmann, H. (1994). Statlog (German Credit Data) [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5NC77",
+    "n": 1000,
+    "n_train": 800,
+    "n_test": 200,
+    "default_rate": 0.3,
+    "missing_numeric": 0,
+    "missing_categorical": 0
+  },
+  "policy": {
+    "positive_class": "default (dataset label 'bad')",
+    "cost_false_approval": 5.0,
+    "cost_false_denial": 1.0,
+    "illustrative_denial_usd": 200.0,
+    "illustrative_false_approval_usd": 1000.0,
+    "selection_rule": "Highest mean stratified cross-validated ROC-AUC on the training set. Ties break toward the smaller fold standard deviation, then the model name.",
+    "threshold_rule": "On training out-of-fold scores, choose the cutoff with the lowest Statlog expected cost. Equal costs keep the higher cutoff."
+  },
+  "cv_summary": [
+    {
+      "model": "logistic_regression",
+      "roc_auc_mean": 0.7686755952380953,
+      "roc_auc_std": 0.05923108009734967,
+      "average_precision_mean": 0.5892879806937865,
+      "average_precision_std": 0.0774056925401409,
+      "display_name": "Logistic regression"
+    },
+    {
+      "model": "random_forest",
+      "roc_auc_mean": 0.7920758928571429,
+      "roc_auc_std": 0.04733069170109823,
+      "average_precision_mean": 0.625021536962377,
+      "average_precision_std": 0.09670814055938731,
+      "display_name": "Random forest"
+    },
+    {
+      "model": "gradient_boosting",
+      "roc_auc_mean": 0.7925595238095238,
+      "roc_auc_std": 0.053769249969521885,
+      "average_precision_mean": 0.5978478154662532,
+      "average_precision_std": 0.07662854415291015,
+      "display_name": "Gradient boosting"
+    }
+  ],
+  "oof_operating_points": [
+    {
+      "model": "logistic_regression",
+      "threshold": 0.28,
+      "expected_cost": 410.0,
+      "expected_cost_per_applicant": 0.5125,
+      "approval_rate": 0.3825,
+      "recall_bad": 0.8916666666666667,
+      "precision_bad": 0.4331983805668016
+    },
+    {
+      "model": "random_forest",
+      "threshold": 0.36,
+      "expected_cost": 420.0,
+      "expected_cost_per_applicant": 0.525,
+      "approval_rate": 0.4,
+      "recall_bad": 0.875,
+      "precision_bad": 0.4375
+    },
+    {
+      "model": "gradient_boosting",
+      "threshold": 0.15,
+      "expected_cost": 405.0,
+      "expected_cost_per_applicant": 0.50625,
+      "approval_rate": 0.31375,
+      "recall_bad": 0.9333333333333333,
+      "precision_bad": 0.4080145719489982
+    }
+  ],
+  "selected_model": "gradient_boosting",
+  "oof_cost_leader": "gradient_boosting",
+  "selected_threshold": 0.15,
+  "test_metrics": [
+    {
+      "roc_auc": 0.8058333333333333,
+      "average_precision": 0.6327989038461923,
+      "brier": 0.1824213286545786,
+      "threshold": 0.28,
+      "precision_bad": 0.4140625,
+      "recall_bad": 0.8833333333333333,
+      "f1_bad": 0.5638297872340425,
+      "true_approvals": 65,
+      "false_denials": 75,
+      "false_approvals": 7,
+      "true_denials": 53,
+      "approvals": 72,
+      "denials": 128,
+      "approval_rate": 0.36,
+      "default_rate_among_approved": 0.09722222222222222,
+      "expected_cost": 110.0,
+      "expected_cost_per_applicant": 0.55,
+      "illustrative_cost_usd": 22000.0,
+      "illustrative_cost_per_applicant_usd": 110.0,
+      "model": "logistic_regression",
+      "display_name": "Logistic regression",
+      "selected": false,
+      "roc_auc_cv_mean": 0.7686755952380953,
+      "roc_auc_cv_std": 0.05923108009734967,
+      "average_precision_cv_mean": 0.5892879806937865,
+      "average_precision_cv_std": 0.0774056925401409
+    },
+    {
+      "roc_auc": 0.8046428571428572,
+      "average_precision": 0.644182435151743,
+      "brier": 0.1800114250987454,
+      "threshold": 0.36,
+      "precision_bad": 0.42857142857142855,
+      "recall_bad": 0.9,
+      "f1_bad": 0.5806451612903226,
+      "true_approvals": 68,
+      "false_denials": 72,
+      "false_approvals": 6,
+      "true_denials": 54,
+      "approvals": 74,
+      "denials": 126,
+      "approval_rate": 0.37,
+      "default_rate_among_approved": 0.08108108108108109,
+      "expected_cost": 102.0,
+      "expected_cost_per_applicant": 0.51,
+      "illustrative_cost_usd": 20400.0,
+      "illustrative_cost_per_applicant_usd": 102.0,
+      "model": "random_forest",
+      "display_name": "Random forest",
+      "selected": false,
+      "roc_auc_cv_mean": 0.7920758928571429,
+      "roc_auc_cv_std": 0.04733069170109823,
+      "average_precision_cv_mean": 0.625021536962377,
+      "average_precision_cv_std": 0.09670814055938731
+    },
+    {
+      "roc_auc": 0.7717857142857144,
+      "average_precision": 0.600231021019421,
+      "brier": 0.18708073991404248,
+      "threshold": 0.15,
+      "precision_bad": 0.3819444444444444,
+      "recall_bad": 0.9166666666666666,
+      "f1_bad": 0.5392156862745098,
+      "true_approvals": 51,
+      "false_denials": 89,
+      "false_approvals": 5,
+      "true_denials": 55,
+      "approvals": 56,
+      "denials": 144,
+      "approval_rate": 0.28,
+      "default_rate_among_approved": 0.08928571428571429,
+      "expected_cost": 114.0,
+      "expected_cost_per_applicant": 0.57,
+      "illustrative_cost_usd": 22800.0,
+      "illustrative_cost_per_applicant_usd": 114.0,
+      "model": "gradient_boosting",
+      "display_name": "Gradient boosting",
+      "selected": true,
+      "roc_auc_cv_mean": 0.7925595238095238,
+      "roc_auc_cv_std": 0.053769249969521885,
+      "average_precision_cv_mean": 0.5978478154662532,
+      "average_precision_cv_std": 0.07662854415291015
+    }
+  ],
+  "test_baselines": {
+    "n": 200,
+    "n_bad": 60,
+    "n_good": 140,
+    "approve_all": 300.0,
+    "deny_all": 140.0,
+    "approve_all_per_applicant": 1.5,
+    "deny_all_per_applicant": 0.7,
+    "approve_all_usd": 60000.0,
+    "deny_all_usd": 28000.0
+  },
+  "train_baselines": {
+    "n": 800,
+    "n_bad": 240,
+    "n_good": 560,
+    "approve_all": 1200.0,
+    "deny_all": 560.0,
+    "approve_all_per_applicant": 1.5,
+    "deny_all_per_applicant": 0.7,
+    "approve_all_usd": 240000.0,
+    "deny_all_usd": 112000.0
+  },
+  "cost_sensitivity": [
+    {
+      "cost_false_approval": 2.0,
+      "cost_false_denial": 1.0,
+      "ratio": 2.0,
+      "threshold": 0.47,
+      "approval_rate": 0.61625,
+      "recall_bad": 0.7291666666666666,
+      "precision_bad": 0.5700325732899023,
+      "expected_cost_per_applicant": 0.3275,
+      "illustrative_cost_per_applicant_usd": 65.5,
+      "illustrative_false_approval_usd": 400.0,
+      "illustrative_false_denial_usd": 200.0
+    },
+    {
+      "cost_false_approval": 5.0,
+      "cost_false_denial": 1.0,
+      "ratio": 5.0,
+      "threshold": 0.15,
+      "approval_rate": 0.31375,
+      "recall_bad": 0.9333333333333333,
+      "precision_bad": 0.4080145719489982,
+      "expected_cost_per_applicant": 0.50625,
+      "illustrative_cost_per_applicant_usd": 101.25,
+      "illustrative_false_approval_usd": 1000.0,
+      "illustrative_false_denial_usd": 200.0
+    },
+    {
+      "cost_false_approval": 10.0,
+      "cost_false_denial": 1.0,
+      "ratio": 10.0,
+      "threshold": 0.15,
+      "approval_rate": 0.31375,
+      "recall_bad": 0.9333333333333333,
+      "precision_bad": 0.4080145719489982,
+      "expected_cost_per_applicant": 0.60625,
+      "illustrative_cost_per_applicant_usd": 121.24999999999999,
+      "illustrative_false_approval_usd": 2000.0,
+      "illustrative_false_denial_usd": 200.0
+    }
+  ],
+  "fairness": {
+    "dropped_features": [
+      "personal_status",
+      "foreign_worker"
+    ],
+    "cv_roc_auc_with_protected": 0.7925595238095238,
+    "cv_roc_auc_without_protected": 0.7855282738095237,
+    "mean_auc_change_when_dropped": -0.007031249999999978,
+    "fold_auc_with_minus_without": [
+      0.015811011904761862,
+      0.012834821428571508,
+      -0.006138392857143016,
+      0.00520833333333337,
+      0.007440476190476164
+    ]
+  },
+  "top_features": [
+    {
+      "feature": "checking_status",
+      "importance_mean": 0.08264285714285727,
+      "importance_std": 0.021166271623074474
+    },
+    {
+      "feature": "purpose",
+      "importance_mean": 0.026464285714285822,
+      "importance_std": 0.013821326032185947
+    },
+    {
+      "feature": "credit_amount",
+      "importance_mean": 0.02300000000000012,
+      "importance_std": 0.01401295157314772
+    },
+    {
+      "feature": "credit_history",
+      "importance_mean": 0.021875000000000127,
+      "importance_std": 0.012125096429941275
+    },
+    {
+      "feature": "duration",
+      "importance_mean": 0.019315476190476327,
+      "importance_std": 0.01806572134453571
+    },
+    {
+      "feature": "other_parties",
+      "importance_mean": 0.009107142857142958,
+      "importance_std": 0.006398352696871288
+    },
+    {
+      "feature": "own_telephone",
+      "importance_mean": 0.002666666666666767,
+      "importance_std": 0.0038945860439223326
+    },
+    {
+      "feature": "foreign_worker",
+      "importance_mean": 0.0025119047619048874,
+      "importance_std": 0.002838455753708292
+    },
+    {
+      "feature": "residence_since",
+      "importance_mean": 0.002255952380952486,
+      "importance_std": 0.002656516343189462
+    },
+    {
+      "feature": "other_payment_plans",
+      "importance_mean": 0.0013809523809525104,
+      "importance_std": 0.004288259826036752
+    }
+  ],
+  "segment_features": {
+    "categorical": "checking_status",
+    "numeric": "credit_amount"
+  },
+  "design": {
+    "test_size": 0.2,
+    "n_splits": 5,
+    "n_importance_repeats": 20,
+    "random_state": 42
+  },
+  "environment": {
+    "python": "3.12.3",
+    "numpy": "2.5.4",
+    "pandas": "3.1.0",
+    "scikit_learn": "1.9.1",
+    "matplotlib": "3.11.2"
+  }
+}
