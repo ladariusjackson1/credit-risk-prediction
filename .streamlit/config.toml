@@ -1,0 +1,22 @@
+# Streamlit Community Cloud starts the app with the repository root as the
+# working directory and reads this file from that root. Usage stats are off
+# so a cold start does not phone home. The desk app loads the committed
+# model and does not download data.
+
+[browser]
+gatherUsageStats = false
+
+[server]
+headless = true
+
+[client]
+toolbarMode = "minimal"
+showErrorLinks = false
+
+[theme]
+base = "light"
+primaryColor = "#0F6E56"
+backgroundColor = "#F6F4F1"
+secondaryBackgroundColor = "#E5EFEA"
+textColor = "#1C1917"
+font = "sans serif"

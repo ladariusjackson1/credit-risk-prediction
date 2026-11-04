@@ -1,8 +1,12 @@
-"""Desk tool: score one German-credit applicant with the saved model.
+"""Desk tool for Streamlit Community Cloud.
 
 Run from the repository root:
 
-    streamlit run app/streamlit_app.py
+    streamlit run streamlit_app.py
+
+Community Cloud uses that same command with the repository root as the working
+directory. Scoring reads ``models/credit_risk_model.joblib``. It does not
+download the dataset and it does not call OpenML.
 """
 
 from __future__ import annotations
@@ -10,7 +14,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parent
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
@@ -19,7 +23,8 @@ import pandas as pd
 import streamlit as st
 
 from credit_risk.config import DISPLAY_NAMES
-from credit_risk.scoring import decision_narrative, load_artifact, score_applicant
+from credit_risk.explain import explain_applicant
+from credit_risk.scoring import decision_narrative, load_artifact
 
 LABELS = {
     "duration": "Duration (months)",
@@ -112,6 +117,12 @@ GROUPS = [
 ]
 
 
+@st.cache_resource(show_spinner=False)
+def cached_artifact() -> dict:
+    """Load the joblib bundle committed in ``models/``. Local disk only."""
+    return load_artifact()
+
+
 def _seed(artifact: dict) -> None:
     reference = artifact["reference_applicant"]
     for column in artifact["feature_columns"]:
@@ -161,13 +172,28 @@ def _collect(artifact: dict) -> dict:
     return {column: st.session_state[f"field_{column}"] for column in artifact["feature_columns"]}
 
 
+def _render_explanation(explanation) -> None:
+    st.subheader("Why this score")
+    st.write(explanation.lead)
+    if explanation.driver_sentences:
+        st.markdown("\n".join(f"- {sentence}" for sentence in explanation.driver_sentences))
+        st.caption(
+            "Each figure resets one field to the typical training applicant and leaves "
+            "the rest as entered. Combined fields can move the score by a different "
+            "amount than the sum of these lines."
+        )
+    if explanation.protected_note:
+        st.info(explanation.protected_note)
+
+
 def _render_decision(artifact: dict, record: dict) -> None:
     try:
-        result = score_applicant(record, artifact)
+        explanation = explain_applicant(record, artifact)
     except (ValueError, KeyError, TypeError) as exc:
         st.error(str(exc))
         return
 
+    result = explanation.score
     headline = "Approve — book the loan" if result.decision == "approve" else "Deny — do not book"
     if result.decision == "approve":
         st.success(headline)
@@ -180,15 +206,8 @@ def _render_decision(artifact: dict, record: dict) -> None:
     probability.metric("Probability of default", f"{result.probability_default:.1%}")
     cutoff.metric("Desk cutoff", f"{result.threshold:.1%}")
     gap.metric("Distance to cutoff", f"{result.probability_default - result.threshold:+.1%}")
+    _render_explanation(explanation)
     st.write(decision_narrative(result, artifact))
-
-    reference_score = score_applicant(artifact["reference_applicant"], artifact)
-    delta = result.probability_default - reference_score.probability_default
-    st.caption(
-        "A typical training applicant scores "
-        f"{reference_score.probability_default:.1%}. "
-        f"This file is {delta:+.1%} relative to that profile."
-    )
 
     snapshot = artifact.get("test_snapshot", {})
     if snapshot:
@@ -201,9 +220,13 @@ def _render_decision(artifact: dict, record: dict) -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Credit desk scorer", layout="wide")
+    st.set_page_config(
+        page_title="Credit desk scorer",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
     try:
-        artifact = load_artifact()
+        artifact = cached_artifact()
     except (FileNotFoundError, ValueError) as exc:
         st.title("Credit desk scorer")
         st.error(str(exc))
@@ -212,8 +235,9 @@ def main() -> None:
     _seed(artifact)
     st.title("Credit desk scorer")
     st.caption(
-        "Scores one installment applicant with the model selected in this study. "
-        "The cutoff minimizes the Statlog cost of a false approval versus a false denial."
+        "Scores one installment applicant with the model saved in this repository. "
+        "The cutoff minimizes the Statlog cost of a false approval versus a false denial. "
+        "Startup reads that model from disk and does not download data."
     )
 
     with st.sidebar:

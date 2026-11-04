@@ -10,6 +10,6 @@ dist/
 build/
 *.egg-info/
 .mypy_cache/
-.streamlit/
-.python-version
+.streamlit/secrets.toml
+.streamlit/credentials.toml
 *.joblib.bak
