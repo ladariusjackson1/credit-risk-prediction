@@ -28,7 +28,7 @@ Against approving every holdout applicant, the tuned desk avoids 55 false approv
 
 ![Desk scorer: a typical applicant, then the fields that push the default probability up or down](docs/credit-desk-demo.gif)
 
-The [live demo](https://credit-risk-prediction.streamlit.app) runs this repository on Streamlit Community Cloud. The main file is `streamlit_app.py`. The app loads `models/credit_risk_model.joblib` from disk and does not download the dataset at startup. For anyone other than the typical training applicant, the panel says which fields push the estimated default probability up or down relative to that profile.
+The [live demo](https://credit-risk-prediction.streamlit.app) runs this repository on Streamlit Community Cloud. The main file is `streamlit_app.py`. The app loads `models/credit_risk_model.joblib` from disk and does not download the dataset at startup. Five tabs share one theme: score one file, score a CSV and download the decisions with explanations, compare models with bootstrap intervals, move a cost slider across the threshold and profit curve, and read the age and sex approval gaps in plain English. For anyone other than the typical training applicant, the panel says which fields push the estimated default probability up or down relative to that profile.
 
 ## The decision
 
@@ -68,6 +68,27 @@ Cross-validated ROC-AUC on the 800, then the locked holdout. Each model is shown
 
 Gradient boosting is the selected model because its training-fold ROC-AUC is the highest. The margin over the random forest is 0.0005, against a fold standard deviation near 0.05, so the two tree models are not separable on this sample. Out-of-fold cost ranks them the same way: boosting 405, logistic regression 410, forest 420, on the 800. The holdout then flips the cost ranking (forest $20,400, logistic $22,000, boosting $22,800). That flip is reported and **not** used to change the model. Two hundred rows can move a couple of defaults. The precommitted rule already picked the out-of-fold cost winner, and every tuned policy beats both naive baselines.
 
+### Tuned logistic baseline, with bootstrap intervals
+
+The baseline is logistic regression allowed a penalty search the race models do not get. On the training folds only, C is chosen from 0.1, 1, and 10 by mean ROC-AUC. Ties would prefer the C closest to 1. The winner is **C = 0.1** (0.781 ± 0.057). C = 1, the race logistic, is 0.769 ± 0.059. C = 10 is 0.760 ± 0.064. C is chosen on the same folds that are reported, so this CV number can look a little better than a nested search. The holdout is not used to pick C, and the baseline is not allowed to replace the shipped model after the holdout is opened.
+
+The intervals below are a stratified percentile bootstrap of the out-of-fold scores, 1,000 replicates, seed 42. Each replicate keeps the class counts. The model is not refit, and C is not chosen again.
+
+| Model | CV ROC-AUC | OOF ROC-AUC (95% CI) | OOF Brier (95% CI) | Cutoff | Holdout ROC-AUC | Holdout illustrative cost |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Logistic regression (C = 1) | 0.769 ± 0.059 | 0.767 (0.732 to 0.801) | 0.196 (0.180 to 0.212) | 0.28 | 0.806 | $22,000 |
+| Random forest | 0.792 ± 0.047 | 0.791 (0.757 to 0.823) | 0.180 (0.172 to 0.190) | 0.36 | 0.805 | $20,400 |
+| **Gradient boosting** | **0.793 ± 0.054** | **0.790 (0.756 to 0.822)** | **0.178 (0.163 to 0.195)** | **0.15** | **0.772** | **$22,800** |
+| Tuned logistic baseline (C = 0.1) | 0.781 ± 0.057 | 0.780 (0.746 to 0.813) | 0.189 (0.176 to 0.202) | 0.34 | 0.809 | $21,000 |
+
+On out-of-fold scores, gradient boosting minus the tuned logistic baseline has a ROC-AUC difference of **+0.010** (95% interval **−0.010 to 0.031**). The interval includes zero, so this training sample does not separate them on ROC-AUC.
+
+The out-of-fold Brier difference, boosting minus the baseline, is **−0.011** (95% interval **−0.020 to −0.002**). That interval excludes zero: on these out-of-fold rows the boosting scores sit closer to the outcomes. Lower Brier is better. The out-of-fold cost per applicant, at each model's own cutoff, differs by **+0.001** (95% interval **−0.054 to 0.056**). The interval includes zero. The point costs on the 800 are 405 for boosting and 404 for the tuned logistic.
+
+The holdout then prices the tuned logistic at **$21,000** and boosting at **$22,800**. Same rule as the forest: a holdout cost gap is reported and is not a reason to reopen a choice that was made on the training scores.
+
+![Out-of-fold ROC-AUC with 95% bootstrap intervals](reports/figures/auc_intervals.png)
+
 ![Training-fold ROC-AUC and average precision](reports/figures/model_comparison.png)
 
 ![Holdout ROC curves](reports/figures/roc_curves.png)
@@ -79,6 +100,10 @@ Gradient boosting is the selected model because its training-fold ROC-AUC is the
 On the training out-of-fold scores, cost bottoms at 0.15. Denying everyone costs 560. Approving everyone costs 1,200. The 0.50 score cutoff is not on that minimum.
 
 ![Cost against the cutoff](reports/figures/threshold_cost.png)
+
+The same out-of-fold scores, drawn as illustrative dollars saved versus approving everyone. The app redraws this curve when the loss ratio changes.
+
+![Illustrative profit versus approving everyone](reports/figures/profit_curve.png)
 
 On the holdout, the same 0.15 rule versus a 0.50 rule:
 
@@ -125,9 +150,26 @@ Loan term and size show up in the same direction a credit officer expects, with 
 
 Dropping `personal_status` and `foreign_worker` and repeating the same 5 folds changes boosting's mean ROC-AUC from 0.793 to 0.786. That is a loss of about 0.007. On the holdout permutation test, shuffling `personal_status` does not hurt AUC (the mean drop is negative), and `foreign_worker` is inside its own noise. Ranking quality does not depend on sex, marital status, or nationality here. A policy build should refit without those two columns. The saved scorer still asks for them so that a score matches the benchmark model that was trained.
 
+The shipped cutoff still treats people differently. On the 800 training out-of-fold scores, at cutoff 0.15:
+
+| Group | n | Default rate | Approval rate | False approval rate | False denial rate |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Female-labeled | 249 | 35.7% | 24.9% | 6.7% | 65.0% |
+| Male-labeled | 551 | 27.4% | 34.3% | 6.6% | 55.2% |
+| Under 25 | 110 | 38.2% | 13.6% | 4.8% | 80.9% |
+| 25 and older | 690 | 28.7% | 34.2% | 7.1% | 54.9% |
+
+Female-labeled minus male-labeled, the approval-rate gap is **−9.4 percentage points**. The false-approval rates, the share of defaulters who were still booked, are 6.7% and 6.6%. That gap is +0.1 percentage point. The approval gap is the false denials: 65.0% of female-labeled applicants who paid were turned away, against 55.2% of male-labeled applicants who paid. The approval ratio is 0.73. A figure of 0.80 is a U.S. screening rule of thumb. It is not a legal result on this file.
+
+Applicants under 25 were approved 13.6% of the time and applicants 25 and older 34.2%. The gap is **−20.6 percentage points**. False approvals among defaulters are 4.8% and 7.1%. False denials among people who paid are 80.9% and 54.9%. The approval ratio is 0.40. Age is an input to the model, and the under-25 group defaults more often in this split (38.2% against 28.7%), so part of the gap is the feature doing what it was trained to do.
+
+The locked holdout is smaller. Female-labeled applicants were approved 26.2% of the time (n=61) and male-labeled applicants 28.8% (n=139), a gap of −2.5 percentage points. Under 25 the approval rate is 15.4% (n=39) against 31.1% for 25 and older (n=161). Twenty defaulters in the female-labeled holdout cell, and 19 under 25, are too few for a stable error rate.
+
+`personal_status` mixes sex and marital status, so the female and male rows collapse those labels. The age cut at 25 is a reporting choice. These gaps describe one cutoff on one split of a 1994 German file. They are not a fair-lending finding, not a U.S. applicant population, and not a reason by themselves to approve or deny anyone. The same note is in the app and in [MODEL_CARD.md](MODEL_CARD.md).
+
 ### Calibration
 
-Holdout Brier score for the selected model is 0.187. Predicting the 30% base rate for everyone would score 0.21, so the probabilities are somewhat informative and still noisy on 200 rows. Use them to rank and to set a cutoff. Do not book a loss reserve off the raw score.
+Holdout Brier score for the selected model is 0.187. Predicting the holdout's own 30% default rate for everyone scores 0.210. On the training out-of-fold scores the Brier score is 0.178, against the same 0.210 for a constant prediction of the training default rate. The probabilities are somewhat informative and still noisy. Use them to rank and to set a cutoff. Do not book a loss reserve off the raw score. The app draws this curve, and a slider redraws illustrative profit against the cutoff when the loss ratio changes. Profit there means dollars saved versus approving everyone, at $200 per cost unit. It is not revenue.
 
 ![Holdout calibration](reports/figures/calibration.png)
 
@@ -137,7 +179,8 @@ Holdout Brier score for the selected model is 0.187. Predicting the 30% base rat
 - The tuned book is small on purpose: 28% of holdout applicants, an 8.9% default rate inside the booked loans, and 92% of defaulters turned away.
 - Boosting, the forest, and logistic regression are close. The written rule selects boosting. The holdout cost ranking prefers the forest by $2,400, which is not a reason to reopen the choice after seeing the test set.
 - Checking-account status dominates. Read the empirical rates, not the English gloss. "No checking account" is 12% default in this file.
-- Sex, marital status, and nationality can come out. The cross-validated AUC cost is about 0.007.
+- Sex, marital status, and nationality can come out of the ranking. The cross-validated AUC cost is about 0.007. At the shipped cutoff the book is still uneven: on the training out-of-fold scores, female-labeled applicants are approved 9.4 percentage points less often than male-labeled applicants, and applicants under 25 are approved 20.6 percentage points less often than older applicants. The female gap is almost entirely extra false denials, not extra booked defaults.
+- A tuned logistic baseline (C = 0.1) is not separable from boosting on out-of-fold ROC-AUC. The difference is +0.010 and the 95% bootstrap interval (−0.010 to 0.031) includes zero. Boosting's out-of-fold Brier score is lower by 0.011, and that interval excludes zero. Out-of-fold cost does not separate them. The holdout prices the baseline $1,800 lower, which does not change the shipped model.
 - If a false approval is only twice a false denial, the same scores support approving about 62% instead of 31%. The cutoff is a management input.
 
 ## What this should not be used for
@@ -160,18 +203,21 @@ python -m streamlit run streamlit_app.py
 
 Streamlit Community Cloud deploys this repository with main file `streamlit_app.py` and Python 3.12 (`.python-version`). `.streamlit/config.toml` turns usage stats off and sets the desk theme. The app adds `src` to its import path, loads the committed model, and does not contact the network on startup. It opens on a typical training applicant. Reset returns to that profile. When a field differs from that profile, the decision panel states the local contribution: the change in estimated default probability from putting that one field back, with the other fields left as entered.
 
+The header shows the shipped model, the cutoff, holdout ROC-AUC, holdout Brier, and illustrative holdout cost. **Batch** accepts a CSV of up to 5,000 rows, keeps extra columns, and downloads a score, a decision, and an explanation for each valid row. **Policy** has a slider for the false-approval cost, from 1 to 20 times a false denial, and redraws the threshold and profit curve on the training out-of-fold scores or on the locked holdout. Moving the slider does not change the saved model. **Fairness** prints the group note and the rates. The model card is [MODEL_CARD.md](MODEL_CARD.md).
+
 The numbers in this README were produced by that command on Python 3.12 with scikit-learn 1.9.1, pandas 3.1.0, and NumPy 2.5.4 (`reports/metrics.json` records the versions).
 
 ## Layout
 
 ```
 streamlit_app.py                 Community Cloud entry point
-src/credit_risk/                 data, features, models, cost, plots, scoring, explanations
+MODEL_CARD.md                    data, intended use, metrics, limits
+src/credit_risk/                 data, features, models, cost, bootstrap, fairness, batch scoring
 data/german_credit.csv           offline snapshot of OpenML credit-g
 models/credit_risk_model.joblib
-reports/                         metrics, tables, figures
+reports/                         metrics, tables, figures, a copy of the model card
 docs/credit-desk-demo.gif
-tests/                           pytest, 100% line coverage of src/credit_risk
+tests/                           pytest, at least 95% line coverage of src/credit_risk
 .streamlit/config.toml
 .github/workflows/ci.yml
 ```
@@ -183,7 +229,12 @@ Continuous integration on GitHub Actions runs Ruff and pytest. The suite covers 
 | File | What it is |
 | --- | --- |
 | `reports/metrics.json` | The study record, including fold means and the holdout |
-| `reports/model_comparison.csv` | Cross-validated ROC-AUC and average precision |
+| `reports/model_comparison.csv` | CV metrics, bootstrap intervals, tuned baseline, holdout cost |
+| `reports/bootstrap_metrics.csv` | Level and difference intervals, out-of-fold and holdout |
+| `reports/logistic_c_grid.csv` | Training-fold ROC-AUC at C = 0.1, 1, and 10 |
+| `reports/fairness_groups.csv` | Approval and error rates by sex label and age band |
+| `reports/fairness_gaps.csv` | Group gaps at the shipped cutoff |
+| `MODEL_CARD.md` | Model card rendered from `reports/metrics.json` |
 | `reports/test_metrics.csv` | Holdout operating point for each model |
 | `reports/threshold_sweep.csv` | Cost at every cutoff |
 | `reports/cost_sensitivity.csv` | Cutoff at loss ratios 2:1, 5:1, and 10:1 |

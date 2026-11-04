@@ -9,7 +9,12 @@ import pytest
 from credit_risk import config
 from credit_risk.features import split_features_target
 from credit_risk.models import build_pipeline, make_classifier, positive_class_probability
-from credit_risk.train import cross_validate_models, select_best_model
+from credit_risk.train import (
+    choose_logistic_c,
+    cross_validate_models,
+    select_best_model,
+    select_logistic_c,
+)
 from tests.synthetic import make_credit_frame
 
 
@@ -88,3 +93,27 @@ def test_cross_validation_records_oof_scores():
         assert len(scores) == len(target)
         assert np.isfinite(scores).all()
         assert name in config.MODEL_NAMES
+
+
+def test_logistic_c_is_chosen_on_training_folds_only():
+    with pytest.raises(ValueError, match="logistic_c applies"):
+        make_classifier("random_forest", logistic_c=0.1)
+    with pytest.raises(ValueError, match="positive finite"):
+        make_classifier("logistic_regression", logistic_c=0)
+    with pytest.raises(ValueError, match="roc_auc_mean"):
+        choose_logistic_c(pd.DataFrame())
+    tied = pd.DataFrame({"C": [0.1, 1.0, 10.0], "roc_auc_mean": [0.70, 0.70, 0.70]})
+    assert choose_logistic_c(tied) == pytest.approx(1.0)
+    farther = pd.DataFrame({"C": [0.1, 10.0], "roc_auc_mean": [0.80, 0.80]})
+    assert choose_logistic_c(farther) == pytest.approx(0.1)
+    winner = pd.DataFrame({"C": [0.1, 1.0, 10.0], "roc_auc_mean": [0.61, 0.62, 0.90]})
+    assert choose_logistic_c(winner) == pytest.approx(10.0)
+
+    features, target = split_features_target(make_credit_frame(90, seed=13))
+    with pytest.raises(ValueError, match="empty"):
+        select_logistic_c(features, target, n_splits=3, grid=())
+    chosen, table, scores = select_logistic_c(features, target, n_splits=3, grid=(0.1, 1.0))
+    assert chosen in (0.1, 1.0)
+    assert set(table["C"]) == {0.1, 1.0}
+    assert len(scores) == len(target)
+    assert np.isfinite(scores).all()

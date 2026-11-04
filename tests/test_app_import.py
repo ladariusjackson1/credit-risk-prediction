@@ -23,6 +23,10 @@ def test_entrypoint_does_not_download_data():
     assert "load_german_credit" not in source
     assert "load_artifact" in source
     assert "explain_applicant" in source
+    assert "st.tabs" in source
+    assert "st.file_uploader" in source
+    assert "st.slider" in source
+    assert "score_batch" in source
 
 
 def test_requirements_are_pinned():
@@ -49,4 +53,6 @@ def test_streamlit_config_is_offline_and_at_the_repo_root():
     assert "gatherUsageStats = false" in text
     assert "headless = true" in text
     assert "[theme]" in text
+    assert 'primaryColor = "#0F6E56"' in text
+    assert "showWidgetBorder = true" in text
     assert (PROJECT_ROOT / ".python-version").read_text(encoding="utf-8").strip() == "3.12"
