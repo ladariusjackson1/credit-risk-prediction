@@ -3,7 +3,7 @@
 **Ladarius Jackson · Business Analytics**
 
 [![CI](https://github.com/ladariusjackson1/credit-risk-prediction/actions/workflows/ci.yml/badge.svg)](https://github.com/ladariusjackson1/credit-risk-prediction/actions/workflows/ci.yml)
-[![Live demo](https://img.shields.io/badge/Live_demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://credit-risk-prediction.streamlit.app)
+[![Streamlit app access pending](https://img.shields.io/badge/Streamlit_app-access_pending-9AA5B1?logo=streamlit&logoColor=white)](https://credit-risk-prediction.streamlit.app)
 
 ## Business problem
 
@@ -28,7 +28,9 @@ Against approving every holdout applicant, the tuned desk avoids 55 false approv
 
 ![Desk scorer: a typical applicant, then the fields that push the default probability up or down](docs/credit-desk-demo.gif)
 
-The [live demo](https://credit-risk-prediction.streamlit.app) runs this repository on Streamlit Community Cloud. The main file is `streamlit_app.py`. The app loads `models/credit_risk_model.joblib` from disk and does not download the dataset at startup. Five tabs share one theme: score one file, score a CSV and download the decisions with explanations, compare models with bootstrap intervals, move a cost slider across the threshold and profit curve, and read the age and sex approval gaps in plain English. For anyone other than the typical training applicant, the panel says which fields push the estimated default probability up or down relative to that profile.
+The GIF is this app running locally from `streamlit_app.py`. Five tabs score one file, score a CSV and download the decisions with explanations, compare models with bootstrap intervals, move a cost slider across the threshold and profit curve, and read the age and sex approval gaps in plain English. The app loads `models/credit_risk_model.joblib` from disk and does not download the dataset at startup. For anyone other than the typical training applicant, the panel says which fields push the estimated default probability up or down relative to that profile.
+
+The hosted address [credit-risk-prediction.streamlit.app](https://credit-risk-prediction.streamlit.app) is access pending. Checked on 6 November 2026 with no cookies: the server answers HTTP 303 and sends the browser to Streamlit sign-in at `https://share.streamlit.io/-/auth/app`, then to `/-/login`. The desk is not in that response. A later HTTP 200 on the sign-in page would still not mean the app is public. Use the local command under How to run.
 
 ## The decision
 
@@ -201,7 +203,7 @@ python -m streamlit run streamlit_app.py
 
 `requirements.txt` pins every direct dependency, including scikit-learn 1.9.1, the version that wrote `models/credit_risk_model.joblib`. `python -m credit_risk` rewrites `reports/`, the figures, and the model. `--refresh` redownloads OpenML `credit-g` before training. Without `--refresh`, training reads `data/german_credit.csv`.
 
-Streamlit Community Cloud deploys this repository with main file `streamlit_app.py` and Python 3.12 (`.python-version`). `.streamlit/config.toml` turns usage stats off and sets the desk theme. The app adds `src` to its import path, loads the committed model, and does not contact the network on startup. It opens on a typical training applicant. Reset returns to that profile. When a field differs from that profile, the decision panel states the local contribution: the change in estimated default probability from putting that one field back, with the other fields left as entered.
+The repo is laid out for Streamlit Community Cloud (main file `streamlit_app.py`, Python 3.12 in `.python-version`). Public access on that host is pending; see the note under Desk demo. `.streamlit/config.toml` turns usage stats off and sets the desk theme. The app adds `src` to its import path, loads the committed model, and does not contact the network on startup. It opens on a typical training applicant. Reset returns to that profile. When a field differs from that profile, the decision panel states the local contribution: the change in estimated default probability from putting that one field back, with the other fields left as entered.
 
 The header shows the shipped model, the cutoff, holdout ROC-AUC, holdout Brier, and illustrative holdout cost. **Batch** accepts a CSV of up to 5,000 rows, keeps extra columns, and downloads a score, a decision, and an explanation for each valid row. **Policy** has a slider for the false-approval cost, from 1 to 20 times a false denial, and redraws the threshold and profit curve on the training out-of-fold scores or on the locked holdout. Moving the slider does not change the saved model. **Fairness** prints the group note and the rates. The model card is [MODEL_CARD.md](MODEL_CARD.md).
 
@@ -210,7 +212,7 @@ The numbers in this README were produced by that command on Python 3.12 with sci
 ## Layout
 
 ```
-streamlit_app.py                 Community Cloud entry point
+streamlit_app.py                 Streamlit entry point (`streamlit run streamlit_app.py`)
 MODEL_CARD.md                    data, intended use, metrics, limits
 src/credit_risk/                 data, features, models, cost, bootstrap, fairness, batch scoring
 data/german_credit.csv           offline snapshot of OpenML credit-g
