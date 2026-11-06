@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -48,6 +49,87 @@ def _check_split_request(y: pd.Series, n_splits: int) -> None:
         )
 
 
+LOGISTIC_SELECTION_RULE = (
+    "On the training set only, C is chosen from the fixed grid 0.1, 1, and 10 "
+    "by mean stratified cross-validated ROC-AUC. Ties prefer the C closest to 1, "
+    "then the smaller C."
+)
+LOGISTIC_OPTIMISM_NOTE = (
+    "C is chosen on the same folds that are reported, so the baseline's "
+    "cross-validated AUC can look slightly better than a nested estimate. "
+    "The holdout is not used to choose C."
+)
+
+
+def choose_logistic_c(grid_results: pd.DataFrame) -> float:
+    """Highest mean ROC-AUC. Ties prefer the C closest to 1, then the smaller C."""
+    required = {"C", "roc_auc_mean"}
+    if grid_results.empty or not required <= set(grid_results.columns):
+        raise ValueError("Grid results must include C and roc_auc_mean.")
+    table = grid_results.copy()
+    table["tie_distance"] = (table["C"].astype(float) - 1.0).abs()
+    ranked = table.sort_values(
+        by=["roc_auc_mean", "tie_distance", "C"],
+        ascending=[False, True, True],
+        kind="mergesort",
+    )
+    return float(ranked.iloc[0]["C"])
+
+
+def select_logistic_c(
+    features: pd.DataFrame,
+    target: pd.Series,
+    n_splits: int = config.N_SPLITS,
+    random_state: int = config.RANDOM_STATE,
+    grid: Sequence[float] = config.LOGISTIC_C_GRID,
+    numeric_features: Sequence[str] | None = None,
+    categorical_features: Sequence[str] | None = None,
+) -> tuple[float, pd.DataFrame, np.ndarray]:
+    """Choose logistic ``C`` on training folds and return that model's out-of-fold scores.
+
+    The same folds score every C. The reported cross-validated AUC is therefore
+    a little optimistic relative to a nested search: C was picked on the folds
+    being measured. The holdout is not involved.
+    """
+    if len(tuple(grid)) == 0:
+        raise ValueError("The logistic C grid is empty.")
+    rows: list[dict[str, float]] = []
+    oof_by_c: dict[float, np.ndarray] = {}
+    for penalty in grid:
+        result = cross_validate_models(
+            features,
+            target,
+            model_names=("logistic_regression",),
+            n_splits=n_splits,
+            random_state=random_state,
+            numeric_features=numeric_features,
+            categorical_features=categorical_features,
+            logistic_c=float(penalty),
+        )
+        summary = result.summary.iloc[0]
+        chosen_key = float(penalty)
+        rows.append(
+            {
+                "C": chosen_key,
+                "roc_auc_mean": float(summary["roc_auc_mean"]),
+                "roc_auc_std": float(summary["roc_auc_std"]),
+                "average_precision_mean": float(summary["average_precision_mean"]),
+                "average_precision_std": float(summary["average_precision_std"]),
+            }
+        )
+        oof_by_c[chosen_key] = result.oof_proba["logistic_regression"]
+    table = pd.DataFrame(rows)
+    chosen = choose_logistic_c(table)
+    scores = None
+    for key, values in oof_by_c.items():
+        if math.isclose(key, chosen, rel_tol=0.0, abs_tol=1e-12):
+            scores = values
+            break
+    if scores is None:
+        raise KeyError(f"No out-of-fold scores were stored for C={chosen}.")
+    return chosen, table, scores
+
+
 def cross_validate_models(
     features: pd.DataFrame,
     target: pd.Series,
@@ -56,6 +138,7 @@ def cross_validate_models(
     random_state: int = config.RANDOM_STATE,
     numeric_features: Sequence[str] | None = None,
     categorical_features: Sequence[str] | None = None,
+    logistic_c: float | None = None,
 ) -> ComparisonResult:
     """Fit each model out of fold and record ROC-AUC and average precision.
 
@@ -71,7 +154,9 @@ def cross_validate_models(
 
     for name in names:
         for fold, (train_idx, valid_idx) in enumerate(splitter.split(features, target), start=1):
-            pipeline = build_pipeline(name, numeric_features, categorical_features)
+            pipeline = build_pipeline(
+                name, numeric_features, categorical_features, logistic_c=logistic_c
+            )
             pipeline.fit(features.iloc[train_idx], target.iloc[train_idx])
             scores = positive_class_probability(pipeline, features.iloc[valid_idx])
             oof[name][valid_idx] = scores

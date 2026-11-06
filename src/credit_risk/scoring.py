@@ -48,6 +48,19 @@ def _require(artifact: Mapping, key: str):
     return artifact[key]
 
 
+def _is_blank(value: object) -> bool:
+    """True for None, blank text, and scalar missing values such as NaN."""
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value.strip() == ""
+    try:
+        missing = pd.isna(value)
+    except (TypeError, ValueError):
+        return False
+    return type(missing) is bool and missing
+
+
 def applicant_frame(record: Mapping, artifact: Mapping) -> pd.DataFrame:
     """Validate one application and return a one-row model frame."""
     if not isinstance(record, Mapping):
@@ -58,7 +71,7 @@ def applicant_frame(record: Mapping, artifact: Mapping) -> pd.DataFrame:
     missing = []
     for column in columns:
         value = record.get(column, None)
-        if value is None or (isinstance(value, str) and value.strip() == ""):
+        if _is_blank(value):
             missing.append(column)
     if missing:
         raise ValueError(f"Missing applicant fields: {missing}.")

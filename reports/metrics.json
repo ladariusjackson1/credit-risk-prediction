@@ -71,6 +71,15 @@
       "approval_rate": 0.31375,
       "recall_bad": 0.9333333333333333,
       "precision_bad": 0.4080145719489982
+    },
+    {
+      "model": "tuned_logistic",
+      "threshold": 0.34,
+      "expected_cost": 404.0,
+      "expected_cost_per_applicant": 0.505,
+      "approval_rate": 0.39,
+      "recall_bad": 0.8916666666666667,
+      "precision_bad": 0.4385245901639344
     }
   ],
   "selected_model": "gradient_boosting",
@@ -160,6 +169,34 @@
       "roc_auc_cv_std": 0.053769249969521885,
       "average_precision_cv_mean": 0.5978478154662532,
       "average_precision_cv_std": 0.07662854415291015
+    },
+    {
+      "roc_auc": 0.809404761904762,
+      "average_precision": 0.6462726014774622,
+      "brier": 0.18186951519727323,
+      "threshold": 0.34,
+      "precision_bad": 0.43089430894308944,
+      "recall_bad": 0.8833333333333333,
+      "f1_bad": 0.5792349726775956,
+      "true_approvals": 70,
+      "false_denials": 70,
+      "false_approvals": 7,
+      "true_denials": 53,
+      "approvals": 77,
+      "denials": 123,
+      "approval_rate": 0.385,
+      "default_rate_among_approved": 0.09090909090909091,
+      "expected_cost": 105.0,
+      "expected_cost_per_applicant": 0.525,
+      "illustrative_cost_usd": 21000.0,
+      "illustrative_cost_per_applicant_usd": 105.0,
+      "model": "tuned_logistic",
+      "display_name": "Tuned logistic baseline",
+      "selected": false,
+      "roc_auc_cv_mean": 0.7813616071428571,
+      "roc_auc_cv_std": 0.056860130487763776,
+      "average_precision_cv_mean": 0.6115640619032244,
+      "average_precision_cv_std": 0.08850724478506392
     }
   ],
   "test_baselines": {
@@ -241,6 +278,348 @@
       0.007440476190476164
     ]
   },
+  "tuned_baseline": {
+    "model": "tuned_logistic",
+    "display_name": "Tuned logistic baseline",
+    "family": "logistic_regression",
+    "C": 0.1,
+    "C_grid": [
+      0.1,
+      1.0,
+      10.0
+    ],
+    "C_results": [
+      {
+        "C": 0.1,
+        "roc_auc_mean": 0.7813616071428571,
+        "roc_auc_std": 0.056860130487763776,
+        "average_precision_mean": 0.6115640619032244,
+        "average_precision_std": 0.08850724478506392
+      },
+      {
+        "C": 1.0,
+        "roc_auc_mean": 0.7686755952380953,
+        "roc_auc_std": 0.05923108009734967,
+        "average_precision_mean": 0.5892879806937865,
+        "average_precision_std": 0.0774056925401409
+      },
+      {
+        "C": 10.0,
+        "roc_auc_mean": 0.7597098214285715,
+        "roc_auc_std": 0.06373309147257697,
+        "average_precision_mean": 0.5775379541929182,
+        "average_precision_std": 0.07829153937032626
+      }
+    ],
+    "selection_rule": "On the training set only, C is chosen from the fixed grid 0.1, 1, and 10 by mean stratified cross-validated ROC-AUC. Ties prefer the C closest to 1, then the smaller C.",
+    "optimism_note": "C is chosen on the same folds that are reported, so the baseline's cross-validated AUC can look slightly better than a nested estimate. The holdout is not used to choose C.",
+    "cv_roc_auc_mean": 0.7813616071428571,
+    "cv_roc_auc_std": 0.056860130487763776,
+    "oof_threshold": 0.34,
+    "oof_expected_cost": 404.0,
+    "holdout": {
+      "roc_auc": 0.809404761904762,
+      "average_precision": 0.6462726014774622,
+      "brier": 0.18186951519727323,
+      "threshold": 0.34,
+      "approval_rate": 0.385,
+      "illustrative_cost_usd": 21000.0,
+      "expected_cost": 105.0
+    }
+  },
+  "best_vs_baseline": {
+    "model": "gradient_boosting",
+    "baseline": "tuned_logistic",
+    "sentence": "On out-of-fold scores, Gradient boosting minus Tuned logistic baseline has a ROC-AUC difference of +0.010 (95% bootstrap interval -0.010 to 0.031). The interval includes zero, so this training sample does not separate them on ROC-AUC.",
+    "oof_roc_auc_difference": 0.009895833333333326,
+    "oof_roc_auc_ci_low": -0.009851562499999956,
+    "oof_roc_auc_ci_high": 0.031363095238095245,
+    "oof_roc_auc_ci_includes_zero": true,
+    "oof_brier_difference": -0.010765517748274861,
+    "oof_brier_ci_low": -0.020224644645088972,
+    "oof_brier_ci_high": -0.0015215391804995488,
+    "oof_cost_per_applicant_difference": 0.0012499999999999734,
+    "oof_cost_ci_low": -0.05375000000000002,
+    "oof_cost_ci_high": 0.05625000000000002,
+    "holdout_cost_usd_model": 22800.0,
+    "holdout_cost_usd_baseline": 21000.0
+  },
+  "bootstrap": {
+    "method": "Stratified percentile bootstrap of fixed scores. Each replicate draws applicants with replacement inside the default class and inside the paid class, keeping those class counts. The model is not refit. The interval does not include the noise of retraining or, for the tuned logistic baseline, the noise of choosing C again.",
+    "n_boot": 1000,
+    "alpha": 0.05,
+    "random_state": 42
+  },
+  "comparison": [
+    {
+      "model": "logistic_regression",
+      "display_name": "Logistic regression",
+      "role": "Candidate",
+      "in_selection_race": true,
+      "roc_auc_cv_mean": 0.7686755952380953,
+      "roc_auc_cv_std": 0.05923108009734967,
+      "oof_roc_auc": 0.7672619047619048,
+      "oof_roc_auc_ci_low": 0.7320846354166666,
+      "oof_roc_auc_ci_high": 0.8013026413690477,
+      "oof_brier": 0.19612393071899498,
+      "oof_brier_ci_low": 0.1798686698450005,
+      "oof_brier_ci_high": 0.2121137309605702,
+      "threshold": 0.28,
+      "holdout_roc_auc": 0.8058333333333333,
+      "holdout_brier": 0.1824213286545786,
+      "holdout_illustrative_cost_usd": 22000.0,
+      "holdout_approval_rate": 0.36
+    },
+    {
+      "model": "random_forest",
+      "display_name": "Random forest",
+      "role": "Candidate",
+      "in_selection_race": true,
+      "roc_auc_cv_mean": 0.7920758928571429,
+      "roc_auc_cv_std": 0.04733069170109823,
+      "oof_roc_auc": 0.7913913690476192,
+      "oof_roc_auc_ci_low": 0.7572007068452382,
+      "oof_roc_auc_ci_high": 0.8234162946428571,
+      "oof_brier": 0.18033034016183627,
+      "oof_brier_ci_low": 0.17151000303620675,
+      "oof_brier_ci_high": 0.1895874213207518,
+      "threshold": 0.36,
+      "holdout_roc_auc": 0.8046428571428572,
+      "holdout_brier": 0.1800114250987454,
+      "holdout_illustrative_cost_usd": 20400.0,
+      "holdout_approval_rate": 0.37
+    },
+    {
+      "model": "gradient_boosting",
+      "display_name": "Gradient boosting",
+      "role": "Selected model",
+      "in_selection_race": true,
+      "roc_auc_cv_mean": 0.7925595238095238,
+      "roc_auc_cv_std": 0.053769249969521885,
+      "oof_roc_auc": 0.7898363095238096,
+      "oof_roc_auc_ci_low": 0.7558591889880952,
+      "oof_roc_auc_ci_high": 0.8215344122023809,
+      "oof_brier": 0.17837552625402556,
+      "oof_brier_ci_low": 0.16268004594576355,
+      "oof_brier_ci_high": 0.19496120892570365,
+      "threshold": 0.15,
+      "holdout_roc_auc": 0.7717857142857144,
+      "holdout_brier": 0.18708073991404248,
+      "holdout_illustrative_cost_usd": 22800.0,
+      "holdout_approval_rate": 0.28
+    },
+    {
+      "model": "tuned_logistic",
+      "display_name": "Tuned logistic baseline",
+      "role": "Tuned baseline",
+      "in_selection_race": false,
+      "roc_auc_cv_mean": 0.7813616071428571,
+      "roc_auc_cv_std": 0.056860130487763776,
+      "oof_roc_auc": 0.7799404761904762,
+      "oof_roc_auc_ci_low": 0.7464029017857142,
+      "oof_roc_auc_ci_high": 0.8133902529761904,
+      "oof_brier": 0.18914104400230042,
+      "oof_brier_ci_low": 0.17614288910926532,
+      "oof_brier_ci_high": 0.2021319084788152,
+      "threshold": 0.34,
+      "holdout_roc_auc": 0.809404761904762,
+      "holdout_brier": 0.18186951519727323,
+      "holdout_illustrative_cost_usd": 21000.0,
+      "holdout_approval_rate": 0.385
+    }
+  ],
+  "group_fairness": {
+    "age_cut": 25.0,
+    "sex_definition": "personal_status values that start with 'female' or 'male'; marital status inside the label is collapsed.",
+    "oof": {
+      "n": 800,
+      "threshold": 0.15,
+      "groups": [
+        {
+          "family": "sex",
+          "group": "male",
+          "n": 551,
+          "n_default": 151,
+          "n_paid": 400,
+          "approvals": 189,
+          "approval_rate": 0.3430127041742287,
+          "false_approval_rate": 0.06622516556291391,
+          "false_denial_rate": 0.5525,
+          "default_rate": 0.27404718693284935
+        },
+        {
+          "family": "sex",
+          "group": "female",
+          "n": 249,
+          "n_default": 89,
+          "n_paid": 160,
+          "approvals": 62,
+          "approval_rate": 0.24899598393574296,
+          "false_approval_rate": 0.06741573033707865,
+          "false_denial_rate": 0.65,
+          "default_rate": 0.357429718875502
+        },
+        {
+          "family": "age",
+          "group": "25 and older",
+          "n": 690,
+          "n_default": 198,
+          "n_paid": 492,
+          "approvals": 236,
+          "approval_rate": 0.34202898550724636,
+          "false_approval_rate": 0.0707070707070707,
+          "false_denial_rate": 0.5487804878048781,
+          "default_rate": 0.28695652173913044
+        },
+        {
+          "family": "age",
+          "group": "under 25",
+          "n": 110,
+          "n_default": 42,
+          "n_paid": 68,
+          "approvals": 15,
+          "approval_rate": 0.13636363636363635,
+          "false_approval_rate": 0.047619047619047616,
+          "false_denial_rate": 0.8088235294117647,
+          "default_rate": 0.38181818181818183
+        }
+      ],
+      "gaps": [
+        {
+          "family": "sex",
+          "group_a": "female",
+          "group_b": "male",
+          "n_a": 249,
+          "n_b": 551,
+          "approval_rate_a": 0.24899598393574296,
+          "approval_rate_b": 0.3430127041742287,
+          "approval_rate_gap": -0.09401672023848573,
+          "false_approval_rate_a": 0.06741573033707865,
+          "false_approval_rate_b": 0.06622516556291391,
+          "false_approval_rate_gap": 0.0011905647741647374,
+          "false_denial_rate_a": 0.65,
+          "false_denial_rate_b": 0.5525,
+          "false_denial_rate_gap": 0.09750000000000003,
+          "approval_ratio_a_over_b": 0.7259089267121395
+        },
+        {
+          "family": "age",
+          "group_a": "under 25",
+          "group_b": "25 and older",
+          "n_a": 110,
+          "n_b": 690,
+          "approval_rate_a": 0.13636363636363635,
+          "approval_rate_b": 0.34202898550724636,
+          "approval_rate_gap": -0.20566534914361,
+          "false_approval_rate_a": 0.047619047619047616,
+          "false_approval_rate_b": 0.0707070707070707,
+          "false_approval_rate_gap": -0.023088023088023088,
+          "false_denial_rate_a": 0.8088235294117647,
+          "false_denial_rate_b": 0.5487804878048781,
+          "false_denial_rate_gap": 0.2600430416068866,
+          "approval_ratio_a_over_b": 0.39869029275808937
+        }
+      ],
+      "note": "At cutoff 0.15 on the training out-of-fold scores (800 applicants), a file is approved when its score is below the cutoff.\n\nOn this split, female-labeled applicants were approved 24.9% of the time (n=249) and male-labeled applicants were approved 34.3% of the time (n=551). The approval-rate gap, female-labeled applicants minus male-labeled applicants, is -9.4 percentage points. Among people who defaulted, the share who were still approved was 6.7% for female-labeled applicants (89 defaulters) and 6.6% for male-labeled applicants (151 defaulters). That gap is +0.1 percentage points. Among people who paid, the share who were turned away was 65.0% for female-labeled applicants (160 who paid) and 55.2% for male-labeled applicants (400 who paid). That gap is +9.8 percentage points. The approval ratio of female-labeled applicants to male-labeled applicants is 0.73. A ratio of 0.80 is a common U.S. screening rule of thumb, and it is not a legal result on this file.\n\nOn this split, applicants under 25 were approved 13.6% of the time (n=110) and applicants 25 and older were approved 34.2% of the time (n=690). The approval-rate gap, applicants under 25 minus applicants 25 and older, is -20.6 percentage points. Among people who defaulted, the share who were still approved was 4.8% for applicants under 25 (42 defaulters) and 7.1% for applicants 25 and older (198 defaulters). That gap is -2.3 percentage points. Among people who paid, the share who were turned away was 80.9% for applicants under 25 (68 who paid) and 54.9% for applicants 25 and older (492 who paid). That gap is +26.0 percentage points. The approval ratio of applicants under 25 to applicants 25 and older is 0.40. A ratio of 0.80 is a common U.S. screening rule of thumb, and it is not a legal result on this file.\n\nRead these gaps as a description of this cutoff on this split, not as a finding of discrimination. personal_status in the 1994 file mixes sex and marital status, so the female and male rows collapse those labels. The age split is under 25 versus 25 and older, which is a reporting choice. Age is an input to the model, and personal status is an input to the benchmark model. A cell with few defaults moves when one or two people change outcome. This is not a fair-lending review, not a U.S. applicant population, and not a reason by itself to approve or deny anyone."
+    },
+    "holdout": {
+      "n": 200,
+      "threshold": 0.15,
+      "groups": [
+        {
+          "family": "sex",
+          "group": "male",
+          "n": 139,
+          "n_default": 40,
+          "n_paid": 99,
+          "approvals": 40,
+          "approval_rate": 0.28776978417266186,
+          "false_approval_rate": 0.075,
+          "false_denial_rate": 0.6262626262626263,
+          "default_rate": 0.28776978417266186
+        },
+        {
+          "family": "sex",
+          "group": "female",
+          "n": 61,
+          "n_default": 20,
+          "n_paid": 41,
+          "approvals": 16,
+          "approval_rate": 0.26229508196721313,
+          "false_approval_rate": 0.1,
+          "false_denial_rate": 0.6585365853658537,
+          "default_rate": 0.32786885245901637
+        },
+        {
+          "family": "age",
+          "group": "25 and older",
+          "n": 161,
+          "n_default": 41,
+          "n_paid": 120,
+          "approvals": 50,
+          "approval_rate": 0.3105590062111801,
+          "false_approval_rate": 0.07317073170731707,
+          "false_denial_rate": 0.6083333333333333,
+          "default_rate": 0.2546583850931677
+        },
+        {
+          "family": "age",
+          "group": "under 25",
+          "n": 39,
+          "n_default": 19,
+          "n_paid": 20,
+          "approvals": 6,
+          "approval_rate": 0.15384615384615385,
+          "false_approval_rate": 0.10526315789473684,
+          "false_denial_rate": 0.8,
+          "default_rate": 0.48717948717948717
+        }
+      ],
+      "gaps": [
+        {
+          "family": "sex",
+          "group_a": "female",
+          "group_b": "male",
+          "n_a": 61,
+          "n_b": 139,
+          "approval_rate_a": 0.26229508196721313,
+          "approval_rate_b": 0.28776978417266186,
+          "approval_rate_gap": -0.02547470220544873,
+          "false_approval_rate_a": 0.1,
+          "false_approval_rate_b": 0.075,
+          "false_approval_rate_gap": 0.02500000000000001,
+          "false_denial_rate_a": 0.6585365853658537,
+          "false_denial_rate_b": 0.6262626262626263,
+          "false_denial_rate_gap": 0.03227395910322739,
+          "approval_ratio_a_over_b": 0.9114754098360657
+        },
+        {
+          "family": "age",
+          "group_a": "under 25",
+          "group_b": "25 and older",
+          "n_a": 39,
+          "n_b": 161,
+          "approval_rate_a": 0.15384615384615385,
+          "approval_rate_b": 0.3105590062111801,
+          "approval_rate_gap": -0.15671285236502625,
+          "false_approval_rate_a": 0.10526315789473684,
+          "false_approval_rate_b": 0.07317073170731707,
+          "false_approval_rate_gap": 0.03209242618741977,
+          "false_denial_rate_a": 0.8,
+          "false_denial_rate_b": 0.6083333333333333,
+          "false_denial_rate_gap": 0.19166666666666676,
+          "approval_ratio_a_over_b": 0.4953846153846155
+        }
+      ],
+      "note": "At cutoff 0.15 on the locked holdout (200 applicants), a file is approved when its score is below the cutoff.\n\nOn this split, female-labeled applicants were approved 26.2% of the time (n=61) and male-labeled applicants were approved 28.8% of the time (n=139). The approval-rate gap, female-labeled applicants minus male-labeled applicants, is -2.5 percentage points. Among people who defaulted, the share who were still approved was 10.0% for female-labeled applicants (20 defaulters) and 7.5% for male-labeled applicants (40 defaulters). That gap is +2.5 percentage points. Among people who paid, the share who were turned away was 65.9% for female-labeled applicants (41 who paid) and 62.6% for male-labeled applicants (99 who paid). That gap is +3.2 percentage points. The approval ratio of female-labeled applicants to male-labeled applicants is 0.91. A ratio of 0.80 is a common U.S. screening rule of thumb, and it is not a legal result on this file.\n\nOn this split, applicants under 25 were approved 15.4% of the time (n=39) and applicants 25 and older were approved 31.1% of the time (n=161). The approval-rate gap, applicants under 25 minus applicants 25 and older, is -15.7 percentage points. Among people who defaulted, the share who were still approved was 10.5% for applicants under 25 (19 defaulters) and 7.3% for applicants 25 and older (41 defaulters). That gap is +3.2 percentage points. Among people who paid, the share who were turned away was 80.0% for applicants under 25 (20 who paid) and 60.8% for applicants 25 and older (120 who paid). That gap is +19.2 percentage points. The approval ratio of applicants under 25 to applicants 25 and older is 0.50. A ratio of 0.80 is a common U.S. screening rule of thumb, and it is not a legal result on this file.\n\nRead these gaps as a description of this cutoff on this split, not as a finding of discrimination. personal_status in the 1994 file mixes sex and marital status, so the female and male rows collapse those labels. The age split is under 25 versus 25 and older, which is a reporting choice. Age is an input to the model, and personal status is an input to the benchmark model. A cell with few defaults moves when one or two people change outcome. This is not a fair-lending review, not a U.S. applicant population, and not a reason by itself to approve or deny anyone."
+    }
+  },
+  "calibration": {
+    "holdout_brier": 0.18708073991404248,
+    "holdout_brier_constant": 0.20999999999999996,
+    "oof_brier": 0.17837552625402556,
+    "oof_brier_constant": 0.20999999999999996
+  },
   "top_features": [
     {
       "feature": "checking_status",
@@ -301,6 +680,7 @@
     "test_size": 0.2,
     "n_splits": 5,
     "n_importance_repeats": 20,
+    "n_bootstrap": 1000,
     "random_state": 42
   },
   "environment": {

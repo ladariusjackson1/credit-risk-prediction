@@ -16,6 +16,12 @@ RANDOM_STATE = 42
 TEST_SIZE = 0.20
 N_SPLITS = 5
 N_IMPORTANCE_REPEATS = 20
+N_BOOTSTRAP = 1000
+BOOTSTRAP_ALPHA = 0.05
+# Young-applicant cut used only for the fairness table. It is a reporting
+# choice, not a class the model was trained to recognize.
+AGE_GROUP_CUT = 25.0
+MAX_BATCH_ROWS = 5000
 
 OPENML_NAME = "credit-g"
 OPENML_VERSION = 1
@@ -103,10 +109,19 @@ STUDY_COLUMNS = [
 
 MODEL_NAMES = ("logistic_regression", "random_forest", "gradient_boosting")
 
+# Logistic regression is the simple baseline. C is chosen on the training
+# folds from this grid, which was fixed before any holdout look. The grid is
+# not part of the model-class race: the shipped model is still the fixed
+# candidate with the highest training-fold ROC-AUC.
+BASELINE_FAMILY = "logistic_regression"
+TUNED_BASELINE_NAME = "tuned_logistic"
+LOGISTIC_C_GRID = (0.1, 1.0, 10.0)
+
 DISPLAY_NAMES = {
     "logistic_regression": "Logistic regression",
     "random_forest": "Random forest",
     "gradient_boosting": "Gradient boosting",
+    "tuned_logistic": "Tuned logistic baseline",
 }
 
 # Fixed before looking at the holdout. This is a model-class comparison,
@@ -163,4 +178,4 @@ CATEGORY_ORDERS = {
     "foreign_worker": ["yes", "no"],
 }
 
-ARTIFACT_VERSION = 1
+ARTIFACT_VERSION = 2

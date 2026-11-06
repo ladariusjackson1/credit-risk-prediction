@@ -20,6 +20,14 @@ def _small_models(monkeypatch):
     monkeypatch.setattr(config, "GB_MIN_SAMPLES_LEAF", 5)
 
 
+def test_bootstrap_lookup_requires_the_row():
+    from credit_risk.pipeline import _boot_value
+
+    empty = pd.DataFrame(columns=["split", "comparison", "model", "metric"])
+    with pytest.raises(KeyError, match="No bootstrap row"):
+        _boot_value(empty, "out_of_fold", "level", "gradient_boosting", "roc_auc")
+
+
 def test_to_builtin_handles_numpy_and_missing():
     sentinel = object()
     payload = to_builtin(
@@ -56,17 +64,34 @@ def test_run_analysis_writes_the_study(tmp_path):
         model_path=tmp_path / "models" / "credit_risk_model.joblib",
         n_splits=3,
         n_importance_repeats=2,
+        n_bootstrap=30,
+        model_card_path=tmp_path / "MODEL_CARD.md",
     )
     assert payload["selected_model"] in config.MODEL_NAMES
     assert 0.0 <= payload["selected_threshold"] <= 1.0
     assert (tmp_path / "reports" / "metrics.json").exists()
     assert (tmp_path / "reports" / "test_metrics.csv").exists()
+    assert (tmp_path / "reports" / "bootstrap_metrics.csv").exists()
+    assert (tmp_path / "reports" / "fairness_groups.csv").exists()
     assert (tmp_path / "reports" / "figures" / "roc_curves.png").stat().st_size > 0
     assert (tmp_path / "reports" / "figures" / "permutation_importance.png").stat().st_size > 0
+    assert (tmp_path / "reports" / "figures" / "profit_curve.png").stat().st_size > 0
+    assert (tmp_path / "reports" / "figures" / "auc_intervals.png").stat().st_size > 0
     assert (tmp_path / "models" / "credit_risk_model.joblib").exists()
     assert payload["dataset"]["n"] == 150
     assert payload["fairness"]["dropped_features"] == ["personal_status", "foreign_worker"]
     assert len(payload["cost_sensitivity"]) == 3
+    assert payload["bootstrap"]["n_boot"] == 30
+    assert payload["tuned_baseline"]["C"] in config.LOGISTIC_C_GRID
+    assert "sentence" in payload["best_vs_baseline"]
+    card = (tmp_path / "MODEL_CARD.md").read_text(encoding="utf-8")
+    report_card = (tmp_path / "reports" / "MODEL_CARD.md").read_text(encoding="utf-8")
+    assert card == report_card
+    assert "Intended use" in card
+    assert "not a fair-lending review" in card
+    assert (
+        payload["selected_model"] in card or config.DISPLAY_NAMES[payload["selected_model"]] in card
+    )
 
 
 def test_main_cli(tmp_path, monkeypatch):
@@ -86,6 +111,10 @@ def test_main_cli(tmp_path, monkeypatch):
             "3",
             "--importance-repeats",
             "2",
+            "--bootstrap",
+            "30",
+            "--model-card",
+            str(tmp_path / "card.md"),
         ]
     )
     assert payload["design"]["n_splits"] == 3

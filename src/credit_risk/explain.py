@@ -13,6 +13,7 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
+import numpy as np
 import pandas as pd
 
 from credit_risk import config
@@ -195,6 +196,89 @@ def _values_match(column: str, left: object, right: object, numeric: set[str]) -
     if column in numeric:
         return math.isclose(float(left), float(right), rel_tol=0.0, abs_tol=1e-9)
     return str(left) == str(right)
+
+
+def explain_frame(features: pd.DataFrame, artifact: Mapping) -> list[ApplicantExplanation]:
+    """Score each row and describe it against the typical training applicant.
+
+    Contributions match :func:`explain_applicant`. Scoring the rows together,
+    then one counterfactual column at a time, keeps a CSV of a few thousand
+    rows within a short request.
+    """
+    if "reference_applicant" not in artifact:
+        raise KeyError(
+            "Model artifact is missing 'reference_applicant'. Retrain with `python -m credit_risk`."
+        )
+    reference = artifact["reference_applicant"]
+    if not isinstance(reference, Mapping):
+        raise TypeError("reference_applicant must be a mapping of feature names to values.")
+    if features.empty:
+        return []
+
+    columns = list(artifact["feature_columns"])
+    frame = features.loc[:, columns].reset_index(drop=True)
+    typical = applicant_frame(reference, artifact)
+    typical_row = typical.iloc[0]
+    numeric = set(artifact["numeric_columns"])
+    pipeline = artifact["pipeline"]
+    probabilities = positive_class_probability(pipeline, frame)
+    typical_probability = float(positive_class_probability(pipeline, typical)[0])
+    deltas = np.zeros((len(frame), len(columns)), dtype=float)
+
+    for index, column in enumerate(columns):
+        reference_value = typical_row[column]
+        counter = frame.copy()
+        if column in numeric:
+            reference_number = float(reference_value)
+            same = np.isclose(
+                frame[column].to_numpy(dtype=float),
+                reference_number,
+                rtol=0.0,
+                atol=1e-9,
+            )
+            counter[column] = reference_number
+        else:
+            reference_text = str(reference_value)
+            same = frame[column].astype(str).to_numpy() == reference_text
+            counter[column] = reference_text
+        if bool(np.all(same)):
+            continue
+        counter_probability = positive_class_probability(pipeline, counter)
+        delta = probabilities - counter_probability
+        delta[same] = 0.0
+        deltas[:, index] = delta
+
+    explanations: list[ApplicantExplanation] = []
+    for row_index, row in frame.iterrows():
+        contributions: list[FeatureContribution] = []
+        for column_index, column in enumerate(columns):
+            contributions.append(
+                FeatureContribution(
+                    feature=column,
+                    label=feature_label(column),
+                    applicant_value=format_feature_value(column, row[column]),
+                    typical_value=format_feature_value(column, typical_row[column]),
+                    delta_probability=float(deltas[int(row_index), column_index]),
+                )
+            )
+        ordered = tuple(
+            sorted(contributions, key=lambda item: (-abs(item.delta_probability), item.feature))
+        )
+        probability = float(probabilities[int(row_index)])
+        lead, sentences, protected_note = compose_narrative(
+            probability, typical_probability, ordered
+        )
+        explanations.append(
+            ApplicantExplanation(
+                score=assemble_score(probability, artifact),
+                typical_probability=typical_probability,
+                contributions=ordered,
+                lead=lead,
+                driver_sentences=sentences,
+                protected_note=protected_note,
+            )
+        )
+    return explanations
 
 
 def explain_applicant(record: Mapping, artifact: Mapping) -> ApplicantExplanation:

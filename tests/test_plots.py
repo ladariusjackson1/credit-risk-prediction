@@ -6,12 +6,14 @@ import numpy as np
 import pandas as pd
 
 from credit_risk.plots import (
+    save_auc_intervals,
     save_calibration,
     save_confusion_matrices,
     save_importance,
     save_model_comparison,
     save_policy_costs,
     save_precision_recall_curves,
+    save_profit_curve,
     save_roc_curves,
     save_score_distribution,
     save_segment_rates,
@@ -101,6 +103,27 @@ def test_every_chart_is_written(tmp_path):
         save_importance(importance, tmp_path / "importance.png"),
         save_score_distribution(labels, scores["gradient_boosting"], 0.4, tmp_path / "scores.png"),
         save_calibration(labels, scores["gradient_boosting"], tmp_path / "calibration.png"),
+        save_profit_curve(
+            pd.DataFrame(
+                {
+                    "threshold": [0.0, 0.4, 1.0],
+                    "savings_vs_approve_all_usd": [-10.0, 80.0, 5.0],
+                }
+            ),
+            0.4,
+            tmp_path / "profit.png",
+        ),
+        save_auc_intervals(
+            pd.DataFrame(
+                {
+                    "model": ["logistic_regression", "gradient_boosting", "tuned_logistic"],
+                    "estimate": [0.74, 0.79, 0.75],
+                    "ci_low": [0.68, 0.72, 0.69],
+                    "ci_high": [0.80, 0.84, 0.81],
+                }
+            ),
+            tmp_path / "intervals.png",
+        ),
         save_segment_rates(
             categories, numeric, "checking_status", "duration", 0.3, tmp_path / "segments.png"
         ),

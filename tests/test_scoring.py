@@ -59,6 +59,8 @@ def test_scoring_rejects_bad_applications(logistic_artifact):
         score_applicant(_record(logistic_artifact, duration="long"), logistic_artifact)
     with pytest.raises(ValueError, match="finite"):
         score_applicant(_record(logistic_artifact, age=float("inf")), logistic_artifact)
+    with pytest.raises(ValueError, match="Missing"):
+        score_applicant(_record(logistic_artifact, age=float("nan")), logistic_artifact)
     with pytest.raises(ValueError, match="must be one of"):
         score_applicant(_record(logistic_artifact, purpose="yacht"), logistic_artifact)
 

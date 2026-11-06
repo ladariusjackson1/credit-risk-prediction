@@ -14,12 +14,22 @@ from credit_risk import config
 from credit_risk.features import build_preprocessor
 
 
-def make_classifier(name: str):
-    """Return an unfitted classifier. Hyperparameters are read from ``config``."""
+def make_classifier(name: str, logistic_c: float | None = None):
+    """Return an unfitted classifier. Hyperparameters are read from ``config``.
+
+    ``logistic_c`` overrides the precommitted ``C=1`` on logistic regression.
+    The model-class race leaves it unset. The tuned baseline passes a value
+    from the fixed grid.
+    """
     key = name.strip().lower()
+    if logistic_c is not None and key != "logistic_regression":
+        raise ValueError("logistic_c applies only to logistic regression.")
     if key == "logistic_regression":
+        penalty = 1.0 if logistic_c is None else float(logistic_c)
+        if not np.isfinite(penalty) or penalty <= 0:
+            raise ValueError("logistic_c must be a positive finite number.")
         return LogisticRegression(
-            C=1.0,
+            C=penalty,
             solver="lbfgs",
             max_iter=config.LOGISTIC_MAX_ITER,
             class_weight="balanced",
@@ -55,6 +65,7 @@ def build_pipeline(
     name: str,
     numeric_features: Sequence[str] | None = None,
     categorical_features: Sequence[str] | None = None,
+    logistic_c: float | None = None,
 ) -> Pipeline:
     """Preprocessing plus classifier. A new pipeline is built on every call."""
     return Pipeline(
@@ -63,7 +74,7 @@ def build_pipeline(
                 "preprocess",
                 build_preprocessor(numeric_features, categorical_features),
             ),
-            ("model", make_classifier(name)),
+            ("model", make_classifier(name, logistic_c=logistic_c)),
         ]
     )
 

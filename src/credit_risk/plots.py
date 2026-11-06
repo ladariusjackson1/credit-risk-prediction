@@ -19,6 +19,7 @@ MODEL_COLORS = {
     "logistic_regression": "#1f4e79",
     "random_forest": "#2a9d8f",
     "gradient_boosting": "#e76f51",
+    "tuned_logistic": "#6d597a",
 }
 INK = "#1f2933"
 MUTED = "#52606d"
@@ -236,9 +237,10 @@ def save_policy_costs(test_table: pd.DataFrame, baselines: dict, selected: str, 
     values = [baselines["approve_all_usd"], baselines["deny_all_usd"]]
     colors = ["#9aa5b1", "#e07a3d"]
     ordered = test_table.copy()
-    ordered["model"] = pd.Categorical(
-        ordered["model"], categories=list(config.MODEL_NAMES), ordered=True
-    )
+    categories = list(config.MODEL_NAMES) + [
+        name for name in ordered["model"].tolist() if name not in config.MODEL_NAMES
+    ]
+    ordered["model"] = pd.Categorical(ordered["model"], categories=categories, ordered=True)
     ordered = ordered.sort_values("model")
     for _, row in ordered.iterrows():
         labels.append(config.DISPLAY_NAMES.get(row["model"], row["model"]))
@@ -306,7 +308,10 @@ def save_score_distribution(y_true, proba, threshold: float, path: Path) -> Path
     return _save(fig, path)
 
 
-def save_calibration(y_true, proba, path: Path, n_bins: int = 8) -> Path:
+def draw_calibration(
+    y_true, proba, n_bins: int = 8, title: str = "Holdout calibration"
+) -> plt.Figure:
+    """Reliability diagram. The caller closes the figure."""
     _apply_style()
     fig, axis = plt.subplots(figsize=(6.2, 5.2))
     actual = np.asarray(y_true).astype(int)
@@ -321,11 +326,79 @@ def save_calibration(y_true, proba, path: Path, n_bins: int = 8) -> Path:
     )
     axis.set_xlabel("Mean predicted probability in the bin")
     axis.set_ylabel("Observed default rate")
-    axis.set_title("Holdout calibration")
+    axis.set_title(title)
     axis.set_xlim(0, 1)
     axis.set_ylim(0, 1)
     axis.legend(frameon=False, loc="upper left")
-    return _save(fig, path)
+    return fig
+
+
+def save_calibration(y_true, proba, path: Path, n_bins: int = 8) -> Path:
+    return _save(draw_calibration(y_true, proba, n_bins=n_bins), path)
+
+
+def draw_profit(sweep: pd.DataFrame, chosen: float) -> plt.Figure:
+    """Illustrative dollars saved versus approving everyone, across cutoffs."""
+    _apply_style()
+    fig, axis = plt.subplots(figsize=(9.0, 4.6))
+    axis.plot(
+        sweep["threshold"],
+        sweep["savings_vs_approve_all_usd"],
+        color="#0F6E56",
+        linewidth=2,
+        label="Savings versus approving everyone",
+    )
+    axis.axhline(0, color="#9aa5b1", linestyle="--", linewidth=1, label="Approve everyone")
+    axis.axvline(chosen, color="#e76f51", linewidth=1.4, label=f"Chosen cutoff {chosen:.2f}")
+    axis.set_xlabel("Deny if estimated default probability is at least this cutoff")
+    axis.set_ylabel("Illustrative dollars saved")
+    axis.set_title("Illustrative profit vs approving everyone")
+    axis.legend(
+        frameon=False,
+        ncol=3,
+        loc="lower left",
+        bbox_to_anchor=(0.0, 1.12),
+    )
+    axis.set_xlim(0, 1)
+    fig.tight_layout()
+    fig.subplots_adjust(left=0.16, top=0.78)
+    return fig
+
+
+def save_profit_curve(sweep: pd.DataFrame, chosen: float, path: Path) -> Path:
+    fig = draw_profit(sweep, chosen)
+    destination = Path(path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(destination, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return destination
+
+
+def draw_auc_intervals(table: pd.DataFrame) -> plt.Figure:
+    """Horizontal 95% intervals for a point estimate, one row per model."""
+    _apply_style()
+    fig, axis = plt.subplots(figsize=(7.4, 4.4))
+    order = table.reset_index(drop=True)
+    labels = [config.DISPLAY_NAMES.get(name, str(name)) for name in order["model"].tolist()]
+    y_pos = np.arange(len(order))
+    estimates = order["estimate"].to_numpy(dtype=float)
+    low = order["ci_low"].to_numpy(dtype=float)
+    high = order["ci_high"].to_numpy(dtype=float)
+    colors = [MODEL_COLORS.get(name, "#334e68") for name in order["model"]]
+    axis.hlines(y_pos, low, high, color=colors, linewidth=2)
+    axis.scatter(estimates, y_pos, color=colors, zorder=3)
+    axis.set_yticks(y_pos, labels)
+    axis.invert_yaxis()
+    axis.set_xlabel("Out-of-fold ROC-AUC")
+    axis.set_title("95% bootstrap interval on out-of-fold ROC-AUC")
+    left = min(0.5, float(np.min(low)) - 0.02)
+    axis.set_xlim(left, 1.0)
+    axis.axvline(0.5, color="#9aa5b1", linestyle="--", linewidth=1)
+    return fig
+
+
+def save_auc_intervals(table: pd.DataFrame, path: Path) -> Path:
+    return _save(draw_auc_intervals(table), path)
 
 
 def save_segment_rates(
