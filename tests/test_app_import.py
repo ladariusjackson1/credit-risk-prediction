@@ -47,6 +47,19 @@ def test_requirements_are_pinned():
     assert "streamlit" in packages
 
 
+def test_readme_does_not_call_the_hosted_app_a_public_demo():
+    """The hosted URL currently redirects to Streamlit sign-in. Do not call that a live demo."""
+    text = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    lowered = text.lower()
+    assert "live demo" not in lowered
+    assert "live_demo" not in lowered
+    assert "access pending" in lowered
+    assert "share.streamlit.io/-/auth/app" in text
+    assert "https://credit-risk-prediction.streamlit.app" in text
+    assert "docs/credit-desk-demo.gif" in text
+    assert "python -m streamlit run streamlit_app.py" in text
+
+
 def test_streamlit_config_is_offline_and_at_the_repo_root():
     path = PROJECT_ROOT / ".streamlit" / "config.toml"
     text = path.read_text(encoding="utf-8")
